@@ -4,6 +4,7 @@ class No {
   private int[] distVec;
   private int[] nextHop;
   private boolean[] isConnected;
+  private int numConnections;
 
   public No(int pid){
     distVec = null;
@@ -17,6 +18,7 @@ class No {
       this.distVec = distVec;
       this.isConnected = isConnected;
       this.nextHop = nextHop;
+      this.numConnections = 3;
     }
     if(pid==1){
       int[] distVec = {1, 0, 1, 999};
@@ -25,6 +27,7 @@ class No {
       this.distVec = distVec;
       this.isConnected = isConnected;
       this.nextHop = nextHop;
+      this.numConnections = 2;
     }
     if(pid==2){
       int[] distVec = {3, 1, 0, 2};
@@ -33,6 +36,7 @@ class No {
       this.distVec = distVec;
       this.isConnected = isConnected;
       this.nextHop = nextHop;
+      this.numConnections = 3;
     }
     if(pid==3){
       int[] distVec = {7, 999, 2, 0};
@@ -41,6 +45,7 @@ class No {
       this.distVec = distVec;
       this.isConnected = isConnected;
       this.nextHop = nextHop;
+      this.numConnections = 2;
     }
   }
 
@@ -72,5 +77,9 @@ class No {
 
   public int getNextHop(int i){
     return nextHop[i];
+  }
+  
+  public int getNumConnections(){
+      return numConnections;
   }
 }

@@ -11,7 +11,9 @@ class RIP implements Runnable{
   static private No no;
   static private int pid;
   static private int[] distVecLocal;
-  static private boolean ended;
+  static private boolean enviou;
+  static private boolean mudou;
+  static private int msg_count;
 
   static private int basePort;
   private Socket connectionSocket;
@@ -29,7 +31,9 @@ class RIP implements Runnable{
     distVecLocal = new int[4];
     for(int i=0; i<4; i++)
       distVecLocal[i] = no.getVec()[i];
-    ended = false;
+    mudou = true;
+    enviou = false;
+    msg_count = 0;
     new Thread(enviaMensagem).start();
     new Thread(recebeMensagem).start();
   }
@@ -41,14 +45,16 @@ class RIP implements Runnable{
         while(true){
           String option = reader.readLine();
           if(option.equals("M")){
-            no.setVec(distVecLocal);
             no.imprimeVec();
           }
           else if(option.equals("E")){
-            if(ended)
+            if(!mudou)
               System.out.println("O vetor não será enviado pois não ocorreram mudanças na ultima rodada.");
-            else{
-              ended = true;
+            else if(enviou){
+                System.out.println("O vetor de distâncias já foi divulgado nesta rodada");
+            }
+            else{ // Não enviou e mudou o vetor de distâncias
+              enviou = true;
               Socket clientSocket;
               StringBuilder message = new StringBuilder();
               int[] auxVec = no.getVec();
@@ -56,12 +62,14 @@ class RIP implements Runnable{
                 Integer.toString(auxVec[2])+'\n'+Integer.toString(auxVec[3]));
               for(int i=0; i<4; i++){
                 if(basePort+pid!=basePort+i && no.isNodeConnected(i)){
-                  clientSocket = new Socket("200.18.100.109", basePort+i);
+                  clientSocket = new Socket("192.168.0.100", basePort+i);
                   DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
                   outToServer.writeBytes(message.toString());
                   clientSocket.close();
                 }
               }
+              if (msg_count == no.getNumConnections())
+                  endRound();
             }
           }
         }
@@ -100,7 +108,7 @@ class RIP implements Runnable{
       for(int i=0; i<4; i++){
         rcvDistVec[i] = Integer.parseInt(inFromClient.readLine());
       }
-
+      msg_count++;
       newDistVec(rcvPid, rcvDistVec);
 
     }
@@ -116,9 +124,28 @@ class RIP implements Runnable{
           System.out.println("Antes: Next Hop->"+no.getNextHop(i)+" || Custo->"+distVecLocal[i]);
           System.out.println("Agora: Next Hop->"+ rcvPid +" || Custo->"+minimo);
           no.setNextHop(rcvPid, i);
-          ended = false;
+          mudou = true;
           distVecLocal[i] = minimo;
         }
       }
+      
+      if (msg_count == no.getNumConnections() && enviou)
+          endRound();
+    }
+    
+    /* FIM DA RODADA, ATUALIZA O VETOR DE DISTANCIAS DO NO E RESETA VARIAVEIS PARA O PROXIMO ROUND */
+    public static synchronized void endRound(){
+        System.out.println("|||| FIM DA RODADA ||||");
+        
+        enviou = false;
+        mudou = false;
+        msg_count = 0;
+        for(int i=0; i<4; i++){ // Checa se o vetor de distancias mudou
+          if(distVecLocal[i] != no.getVec()[i])
+            mudou = true;
+        }
+        
+        no.setVec(distVecLocal);
+        no.imprimeVec();  
     }
 }
