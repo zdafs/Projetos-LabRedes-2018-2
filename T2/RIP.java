@@ -48,8 +48,18 @@ class RIP implements Runnable{
             no.imprimeVec();
           }
           else if(option.equals("E")){
-            if(!mudou)
+            if(!mudou){
+                Socket clientSocket;
+                for(int i=0; i<4; i++){
+                    if(basePort+pid!=basePort+i && no.isNodeConnected(i)){
+                      clientSocket = new Socket("192.168.43.78", basePort+i);
+                      DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+                      outToServer.writeBytes("Done");
+                      clientSocket.close();
+                    }
+                }
               System.out.println("O vetor não será enviado pois não ocorreram mudanças na ultima rodada.");
+            }
             else if(enviou){
                 System.out.println("O vetor de distâncias já foi divulgado nesta rodada");
             }
@@ -62,7 +72,7 @@ class RIP implements Runnable{
                 Integer.toString(auxVec[2])+'\n'+Integer.toString(auxVec[3]));
               for(int i=0; i<4; i++){
                 if(basePort+pid!=basePort+i && no.isNodeConnected(i)){
-                  clientSocket = new Socket("192.168.0.100", basePort+i);
+                  clientSocket = new Socket("192.168.43.78", basePort+i);
                   DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
                   outToServer.writeBytes(message.toString());
                   clientSocket.close();
@@ -103,13 +113,20 @@ class RIP implements Runnable{
     try{
       BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
 
-      int rcvPid = Integer.parseInt(inFromClient.readLine());
-      int[] rcvDistVec = new int[4];
-      for(int i=0; i<4; i++){
-        rcvDistVec[i] = Integer.parseInt(inFromClient.readLine());
-      }
+      String identifier = inFromClient.readLine();
       msg_count++;
-      newDistVec(rcvPid, rcvDistVec);
+      if(!identifier.equals("Done")){
+            int rcvPid = Integer.parseInt(identifier);
+            int[] rcvDistVec = new int[4];
+            for(int i=0; i<4; i++){
+              rcvDistVec[i] = Integer.parseInt(inFromClient.readLine());
+            }
+            newDistVec(rcvPid, rcvDistVec);
+        }
+        else{
+            if (msg_count == no.getNumConnections() && enviou)
+                endRound();
+        }
 
     }
     catch(Exception e){
@@ -128,15 +145,15 @@ class RIP implements Runnable{
           distVecLocal[i] = minimo;
         }
       }
-      
+
       if (msg_count == no.getNumConnections() && enviou)
           endRound();
     }
-    
+
     /* FIM DA RODADA, ATUALIZA O VETOR DE DISTANCIAS DO NO E RESETA VARIAVEIS PARA O PROXIMO ROUND */
     public static synchronized void endRound(){
         System.out.println("|||| FIM DA RODADA ||||");
-        
+
         enviou = false;
         mudou = false;
         msg_count = 0;
@@ -144,8 +161,8 @@ class RIP implements Runnable{
           if(distVecLocal[i] != no.getVec()[i])
             mudou = true;
         }
-        
+
         no.setVec(distVecLocal);
-        no.imprimeVec();  
+        no.imprimeVec();
     }
 }
